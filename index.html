@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expense Tracker</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💸</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--tx:#1d2433;--mut:#6b7488;--bd:#e3e7ef;--pri:#4C78A8;--dng:#E45756}
+@media(prefers-color-scheme:dark){:root{--bg:#0f131b;--card:#181e2a;--tx:#e8ecf4;--mut:#93a0b8;--bd:#283042}}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx)}
+.wrap{max-width:1100px;margin:0 auto;padding:20px}
+header{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;margin-bottom:16px}
+h1{margin:0;font-size:1.6rem}
+h2{margin:0 0 10px;font-size:1rem}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px}
+.grid{display:grid;gap:14px}
+.stats{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:14px}
+.stat small{color:var(--mut)}
+.stat b{display:block;font-size:1.5rem;margin-top:4px}
+.charts{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-bottom:14px}
+.chartbox{position:relative;height:250px}
+.wide{grid-column:1/-1}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;align-items:end}
+label{font-size:.75rem;color:var(--mut);display:block;margin-bottom:3px}
+input,select,button{font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);width:100%}
+button{cursor:pointer;width:auto}
+.pri{background:var(--pri);color:#fff;border-color:var(--pri)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.chip{border-radius:999px;padding:5px 12px;font-size:.85rem;border:1px solid var(--bd);background:var(--card)}
+.chip.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;color:var(--mut);font-size:.85rem}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--bd);white-space:nowrap}
+td.r,th.r{text-align:right}
+.x{color:var(--dng);border:none;background:none;padding:2px 8px;font-size:1.1rem}
+.empty{color:var(--mut);padding:16px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>💸 Expense Tracker</h1>
+    <div style="display:flex;gap:8px;align-items:center">
+      <label for="cur" style="margin:0">Currency</label>
+      <select id="cur"></select>
+    </div>
+  </header>
+
+  <div class="grid stats">
+    <div class="card stat"><small>Total spent</small><b id="s1">-</b></div>
+    <div class="card stat"><small>Entries</small><b id="s2">-</b></div>
+    <div class="card stat"><small>Top category</small><b id="s3">-</b></div>
+    <div class="card stat"><small>Average per entry</small><b id="s4">-</b></div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <h2>Add expense</h2>
+    <form id="f">
+      <div><label>Date</label><input type="date" id="d" required></div>
+      <div><label>Category</label><input id="c" list="cats" placeholder="food" required></div>
+      <div><label>Amount</label><input type="number" id="a" min="0" step="0.01" placeholder="0.00" required></div>
+      <div><label>Note</label><input id="n" placeholder="optional"></div>
+      <button class="pri" type="submit">Add</button>
+    </form>
+    <datalist id="cats"><option>food</option><option>transport</option><option>school</option><option>entertainment</option><option>bills</option></datalist>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <h2>Filter by category <small style="color:var(--mut);font-weight:400">(click a chip, a donut slice, or a bar)</small></h2>
+    <div class="chips" id="chips"></div>
+    <div class="bar" id="fbar"></div>
+  </div>
+
+  <div class="grid charts">
+    <div class="card"><h2>Spending by category</h2><div class="chartbox"><canvas id="c1"></canvas></div></div>
+    <div class="card"><h2>Spending per month</h2><div class="chartbox"><canvas id="c2"></canvas></div></div>
+    <div class="card wide"><h2>Daily spending</h2><div class="chartbox"><canvas id="c3"></canvas></div></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h2 style="margin:0">Expenses</h2>
+      <div style="display:flex;gap:8px">
+        <button id="sample">Load sample data</button>
+        <button id="csv">Export CSV</button>
+        <button id="clear">Clear all</button>
+      </div>
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th>Date</th><th>Category</th><th>Note</th><th class="r">Amount</th><th></th></tr></thead>
+      <tbody id="tb"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const PAL = ["#4C78A8","#F58518","#54A24B","#E45756","#72B7B2","#B279A2","#9D755D","#EECA3B"];
+const CURS = ["PHP","USD","EUR","GBP","JPY","KRW","INR","CNY","AUD","CAD","SGD"];
+let S = { ex: [], cur: "PHP", cat: null, mon: null };
+let charts = [];
+
+try {
+  const d = JSON.parse(localStorage.getItem("et") || "null");
+  if (d) { S.ex = d.ex || []; S.cur = d.cur || "PHP"; }
+} catch (e) {}
+const save = () => { try { localStorage.setItem("et", JSON.stringify({ ex: S.ex, cur: S.cur })); } catch (e) {} };
+
+const fmt = n => new Intl.NumberFormat(undefined, { style: "currency", currency: S.cur }).format(n);
+const sym = c => new Intl.NumberFormat(undefined, { style: "currency", currency: c }).formatToParts(0).find(p => p.type === "currency").value;
+const esc = s => String(s).replace(/[&<>"]/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]));
+const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+const sum = a => a.reduce((t, e) => t + e.amt, 0);
+const group = (a, k) => a.reduce((o, e) => (o[k(e)] = (o[k(e)] || 0) + e.amt, o), {});
+
+$("#cur").innerHTML = CURS.map(c => `<option value="${c}">${c} (${sym(c)})</option>`).join("");
+$("#cur").value = S.cur;
+$("#cur").onchange = e => { S.cur = e.target.value; save(); render(); };
+$("#d").value = today();
+
+$("#f").onsubmit = e => {
+  e.preventDefault();
+  S.ex.push({ id: Date.now(), date: $("#d").value, cat: $("#c").value.trim().toLowerCase(), amt: parseFloat($("#a").value), note: $("#n").value.trim() });
+  save(); $("#c").value = ""; $("#a").value = ""; $("#n").value = ""; render();
+};
+$("#sample").onclick = () => {
+  const base = new Date(); const cats = ["food", "transport", "school", "entertainment", "bills"];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(base - i * 864e5 * 2);
+    S.ex.push({ id: Date.now() + i, date: new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10), cat: cats[(i * 7) % 5], amt: 40 + ((i * 53) % 400), note: "sample" });
+  }
+  save(); render();
+};
+$("#clear").onclick = () => { if (confirm("Delete all expenses?")) { S.ex = []; S.cat = S.mon = null; save(); render(); } };
+$("#csv").onclick = () => {
+  const rows = ["date,category,amount,note", ...S.ex.map(e => `${e.date},${e.cat},${e.amt},"${e.note.replace(/"/g, '""')}"`)];
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([rows.join("\n")], { type: "text/csv" }));
+  a.download = "expenses.csv"; a.click();
+};
+
+function toggle(k, v) { S[k] = S[k] === v ? null : v; render(); }
+
+function render() {
+  const all = S.ex;
+  const catList = [...new Set(all.map(e => e.cat))].sort();
+  const colOf = c => PAL[catList.indexOf(c) % PAL.length];
+  const byMon = S.mon ? all.filter(e => e.date.slice(0, 7) === S.mon) : all;   // feeds donut
+  const byCat = S.cat ? all.filter(e => e.cat === S.cat) : all;                // feeds bars
+  const both = byMon.filter(e => !S.cat || e.cat === S.cat);                   // feeds rest
+
+  // stats
+  const tot = sum(both), cg = group(both, e => e.cat);
+  const top = Object.entries(cg).sort((a, b) => b[1] - a[1])[0];
+  $("#s1").textContent = fmt(tot);
+  $("#s2").textContent = both.length;
+  $("#s3").textContent = top ? top[0] : "-";
+  $("#s4").textContent = both.length ? fmt(tot / both.length) : "-";
+
+  // chips + filter bar
+  $("#chips").innerHTML = catList.map(c => `<button class="chip ${S.cat === c ? "on" : ""}" data-c="${esc(c)}">${esc(c)}</button>`).join("") || '<span class="empty" style="padding:0">No categories yet</span>';
+  document.querySelectorAll(".chip").forEach(b => b.onclick = () => toggle("cat", b.dataset.c));
+  $("#fbar").innerHTML = (S.cat || S.mon)
+    ? `Showing: ${S.cat ? "<b>" + esc(S.cat) + "</b>" : "all categories"}, ${S.mon ? "<b>" + S.mon + "</b>" : "all months"} <button id="rf">Clear filters</button>` : "";
+  if ($("#rf")) $("#rf").onclick = () => { S.cat = S.mon = null; render(); };
+
+  // charts
+  charts.forEach(c => c.destroy()); charts = [];
+  const css = getComputedStyle(document.documentElement);
+  Chart.defaults.color = css.getPropertyValue("--mut").trim();
+  Chart.defaults.borderColor = css.getPropertyValue("--bd").trim();
+  const money = { callbacks: { label: c => " " + fmt(c.parsed.y ?? c.parsed) } };
+  const fade = (col, on) => on ? col : col + "55";
+
+  const dg = group(byMon, e => e.cat), dl = Object.keys(dg);
+  charts.push(new Chart($("#c1"), {
+    type: "doughnut",
+    data: { labels: dl, datasets: [{ data: dl.map(k => dg[k]), backgroundColor: dl.map(k => fade(colOf(k), !S.cat || S.cat === k)), borderWidth: 0 }] },
+    options: { maintainAspectRatio: false, cutout: "60%", onClick: (e, el) => el.length && toggle("cat", dl[el[0].index]),
+      onHover: (e, el) => e.native.target.style.cursor = el.length ? "pointer" : "default",
+      plugins: { legend: { position: "right" }, tooltip: { callbacks: { label: c => ` ${c.label}: ${fmt(c.parsed)}` } } } }
+  }));
+
+  const mg = group(byCat, e => e.date.slice(0, 7)), ml = Object.keys(mg).sort();
+  charts.push(new Chart($("#c2"), {
+    type: "bar",
+    data: { labels: ml, datasets: [{ data: ml.map(k => mg[k]), backgroundColor: ml.map(k => fade("#4C78A8", !S.mon || S.mon === k)), borderRadius: 6 }] },
+    options: { maintainAspectRatio: false, onClick: (e, el) => el.length && toggle("mon", ml[el[0].index]),
+      onHover: (e, el) => e.native.target.style.cursor = el.length ? "pointer" : "default",
+      plugins: { legend: { display: false }, tooltip: money }, scales: { y: { ticks: { callback: v => fmt(v) } } } }
+  }));
+
+  const lg = group(both, e => e.date), ll = Object.keys(lg).sort();
+  charts.push(new Chart($("#c3"), {
+    type: "line",
+    data: { labels: ll.map(d => new Date(d + "T00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })),
+      datasets: [{ data: ll.map(k => lg[k]), borderColor: "#E45756", backgroundColor: "#E4575622", fill: true, tension: .3, pointRadius: 4 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: money },
+      scales: { y: { ticks: { callback: v => fmt(v) } }, x: { ticks: { maxRotation: 40 } } } }
+  }));
+
+  // table
+  const rows = [...both].sort((a, b) => b.date.localeCompare(a.date));
+  $("#tb").innerHTML = rows.map(e => `<tr><td>${e.date}</td><td><span style="color:${colOf(e.cat)}">●</span> ${esc(e.cat)}</td><td>${esc(e.note)}</td><td class="r">${fmt(e.amt)}</td><td><button class="x" data-id="${e.id}" title="Delete">×</button></td></tr>`).join("")
+    || '<tr><td colspan="5" class="empty">No expenses yet. Add one above or load sample data.</td></tr>';
+  document.querySelectorAll(".x").forEach(b => b.onclick = () => { S.ex = S.ex.filter(e => e.id != b.dataset.id); save(); render(); });
+}
+
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+render();
+</script>
+</body>
+</html>
