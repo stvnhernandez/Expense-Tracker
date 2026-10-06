@@ -22,3 +22,5 @@ python tracker.py
 - Monthly budget limits and alerts
 - Filter by date range
 - Export to Google Sheets
+
+**Live demo:** https://YOUR-USERNAME.github.io/Expense-Tracker/
