@@ -23,4 +23,4 @@ python tracker.py
 - Filter by date range
 - Export to Google Sheets
 
-**Live demo:** https://YOUR-USERNAME.github.io/Expense-Tracker/
+**Live demo:** (https://stvnhernandez.github.io/Expense-Tracker/)
